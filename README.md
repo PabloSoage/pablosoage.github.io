@@ -1,7 +1,10 @@
-# rustify.github.io
+# pablosoage.github.io
 
-Android App Links verification host for [Rustify](https://github.com/PabloSoage/Rustify).
+GitHub Pages site hosting Android App Links verification for [Rustify](https://github.com/PabloSoage/Rustify), a Spotify client for Android.
 
-Serves `/.well-known/assetlinks.json` for Android App Link auto-verification so that `https://pablosoage.github.io/r/?s=...` wrapper links open directly in the Rustify app.
+## Files
 
-The actual site is a GitHub Pages deployment — the only file that matters is the asset links JSON.
+- **`.well-known/assetlinks.json`** — Declares `com.varuna.rustify` as the verified handler for `https://pablosoage.github.io/r/...` wrapper links. Contains SHA256 fingerprints for both debug and release signing keys. Android reads this at install time to auto-verify App Links without user interaction.
+- **`.nojekyll`** — Tells GitHub Pages to serve the `.well-known` directory as-is (Jekyll ignores dot-prefixed directories by default).
+
+The only functional file is the asset links JSON; there is no website here.
