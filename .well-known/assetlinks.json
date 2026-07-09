@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.varuna.rustify",
+      "sha256_cert_fingerprints": [
+        "5F:F0:0C:0A:83:36:9D:7F:93:79:25:02:9C:DB:14:09:2C:FD:69:82:C5:13:A2:79:6C:44:F7:D0:ED:F5:15:C2",
+        "FC:34:D7:81:10:BD:A0:D8:42:08:98:E0:E4:5A:F3:1E:B6:E3:B0:D6:D1:56:E7:DE:59:88:D6:63:4D:D1:51:CA"
+      ]
+    }
+  }
+]
