@@ -153,6 +153,36 @@
 
 <section>
   <div class="wrap">
+    <h2>Upstream</h2>
+    <p class="sub">Other people's projects, made better.</p>
+    <div class="grid">
+      <article class="card">
+        <h3><a href="https://github.com/DeusData/codebase-memory-mcp/issues/1764" rel="noopener">codebase-memory-mcp #1764</a></h3>
+        <p>
+          Every idle client burned about 0.7 of a CPU core from one release onward, and the cost
+          multiplied by the number of open sessions. Bisected against the last good version as a
+          control and reproduced by starting the binary from a shell and sending it nothing at
+          all. Fixed upstream; on closing, the maintainer wrote that “the diagnosis in this
+          thread did the hard part”.
+        </p>
+        <div class="tags"><span class="tag">Diagnosis</span><span class="tag">Profiling</span><span class="tag">Windows</span></div>
+      </article>
+      <article class="card">
+        <h3><a href="https://github.com/sasha0552/nvidia-pstated/pull/10" rel="noopener">nvidia-pstated #10</a></h3>
+        <p>
+          Datacentre GPUs such as the P100 and V100 expose a single performance state, so the
+          tool had nothing to switch them to. This adds a clock-based fallback: where setting a
+          P-state fails, read each GPU's lowest supported core and memory clocks and idle there
+          instead. +519/−18, open.
+        </p>
+        <div class="tags"><span class="tag">C</span><span class="tag">NVML</span><span class="tag">Tesla V100</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
     <h2>Languages, measured</h2>
     <p class="sub">Bytes of source across the projects listed above, markup and build glue excluded.</p>
     <div class="bar" id="langbar"><i style="flex:1;background:var(--line)"></i></div>
@@ -248,8 +278,8 @@
       blurb: 'A Rust terminal UI that controls and monitors a server’s BMC over Redfish — sensors, charts, power and the event log — with no ipmitool and no web interface.',
       tags: ['Rust', 'TUI', 'Redfish'] },
     { repo: 'Fabric2D', title: 'Fabric2D',
-      blurb: 'A procedural 2D engine with no commercial framework underneath: multithreaded Jump Point Search pathfinding, graph-based generation and native FMOD audio.',
-      tags: ['C / C++', 'Pathfinding'] }
+      blurb: 'A procedural 2D engine on pygame with no commercial framework underneath: multithreaded Jump Point Search pathfinding, graph-based generation, and the native FMOD audio engine driven through its Python bindings.',
+      tags: ['Python', 'pygame', 'Pathfinding', 'FMOD'] }
   ];
 
   // Colours borrowed from GitHub's own language palette, so the bar reads the
