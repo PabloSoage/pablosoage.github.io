@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pablo Soage — Systems, Reverse Engineering, FPGA</title>
+<meta name="description" content="Computer engineer working on low-level systems, reverse engineering, FPGA/SDR and automotive diagnostics.">
+<meta property="og:title" content="Pablo Soage">
+<meta property="og:description" content="Low-level systems, reverse engineering, FPGA/SDR and automotive diagnostics.">
+<meta property="og:type" content="profile">
+<meta property="og:url" content="https://pablosoage.github.io/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+<style>
+  :root {
+    --bg: #fbfbfa; --panel: #ffffff; --line: #e4e2dd;
+    --ink: #1a1a18; --muted: #6b6862; --faint: #97938b;
+    --accent: #b4530a; --accent-soft: #fdf0e4;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1113; --panel: #16191c; --line: #262b30;
+      --ink: #e8e6e3; --muted: #9aa0a6; --faint: #6b7076;
+      --accent: #e8913a; --accent-soft: #241a10;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── header ─────────────────────────────────────────────────────── */
+  header { padding: 72px 0 40px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: clamp(2rem, 6vw, 3rem); margin: 0 0 6px; letter-spacing: -0.02em; }
+  .role {
+    font-family: var(--mono); font-size: 0.82rem; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.12em; margin: 0 0 18px;
+  }
+  .lede { font-size: 1.08rem; color: var(--muted); max-width: 62ch; margin: 0 0 22px; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; }
+  .links a {
+    font-family: var(--mono); font-size: 0.82rem; padding: 7px 13px;
+    border: 1px solid var(--line); border-radius: 999px; color: var(--ink);
+    background: var(--panel); transition: border-color .15s, color .15s;
+  }
+  .links a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+  /* ── live counters ──────────────────────────────────────────────── */
+  .counters { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px;
+              background: var(--line); border: 1px solid var(--line); border-radius: var(--radius);
+              overflow: hidden; margin: 34px 0 0; }
+  .counter { background: var(--panel); padding: 16px 18px; }
+  .counter b { display: block; font-size: 1.5rem; font-family: var(--mono); letter-spacing: -0.02em; }
+  .counter span { font-size: 0.72rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* ── sections ───────────────────────────────────────────────────── */
+  section { padding: 56px 0; border-bottom: 1px solid var(--line); }
+  h2 { font-size: 1.05rem; font-family: var(--mono); font-weight: 600; margin: 0 0 6px;
+       text-transform: uppercase; letter-spacing: 0.1em; }
+  h2::before { content: "// "; color: var(--accent); }
+  .sub { color: var(--faint); font-size: 0.9rem; margin: 0 0 28px; max-width: 64ch; }
+
+  /* ── project cards ──────────────────────────────────────────────── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px; display: flex; flex-direction: column; gap: 10px;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card.lead { grid-column: 1 / -1; border-left: 3px solid var(--accent); }
+  .card h3 { margin: 0; font-size: 1.05rem; font-family: var(--mono); }
+  .card h3 a { color: var(--ink); }
+  .card h3 a:hover { color: var(--accent); }
+  .card p { margin: 0; font-size: 0.92rem; color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+  .tag { font-family: var(--mono); font-size: 0.68rem; padding: 3px 8px; border-radius: 4px;
+         background: var(--accent-soft); color: var(--accent); }
+  .meta { display: flex; gap: 14px; font-family: var(--mono); font-size: 0.7rem;
+          color: var(--faint); border-top: 1px solid var(--line); padding-top: 10px; }
+  .meta .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+               margin-right: 5px; vertical-align: -1px; background: var(--faint); }
+
+  /* ── language bar ───────────────────────────────────────────────── */
+  .bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden;
+         border: 1px solid var(--line); margin-bottom: 16px; }
+  .bar i { display: block; height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.78rem; }
+  .legend span { color: var(--muted); }
+  .legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 6px; }
+  .caveat { font-size: 0.82rem; color: var(--faint); border-left: 2px solid var(--line);
+            padding-left: 14px; margin-top: 22px; max-width: 66ch; }
+
+  /* ── bench / infrastructure ─────────────────────────────────────── */
+  .specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .spec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .spec h3 { margin: 0 0 12px; font-size: 0.82rem; font-family: var(--mono);
+             text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+  .spec dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 0.86rem; }
+  .spec dt { color: var(--faint); font-family: var(--mono); font-size: 0.76rem; }
+  .spec dd { margin: 0; color: var(--muted); }
+
+  footer { padding: 40px 0 60px; color: var(--faint); font-size: 0.82rem; }
+  .skeleton { color: var(--faint); font-family: var(--mono); font-size: 0.82rem; }
+  @media (max-width: 560px) { header { padding-top: 48px; } section { padding: 40px 0; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Pablo Soage</h1>
+    <p class="role">Systems &middot; Reverse Engineering &middot; FPGA</p>
+    <p class="lede">
+      Computer engineer working close to the hardware: undocumented protocols, real-time signal
+      processing in programmable logic, and the kind of problem that is only solved by measuring
+      it. Currently a core software developer at Ágata Technology, and building toward embedded
+      and defence systems.
+    </p>
+    <nav class="links">
+      <a href="https://github.com/PabloSoage">GitHub</a>
+      <a href="https://github.com/PabloSoage/scanner64">scanner64</a>
+      <a href="https://github.com/PabloSoage/opendash">opendash</a>
+      <a href="https://github.com/PabloSoage/Rustify">Rustify</a>
+    </nav>
+    <div class="counters" id="counters">
+      <div class="counter"><b id="c-repos">—</b><span>public repos</span></div>
+      <div class="counter"><b id="c-stars">—</b><span>stars</span></div>
+      <div class="counter"><b id="c-langs">—</b><span>languages</span></div>
+      <div class="counter"><b id="c-push">—</b><span>last push</span></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Selected work</h2>
+    <p class="sub">
+      Repository metadata below — language, stars, last push — is read live from the GitHub API,
+      so it is never out of date with the code.
+    </p>
+    <div class="grid" id="projects"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Languages, measured</h2>
+    <p class="sub">Bytes of source across the projects listed above, markup and build glue excluded.</p>
+    <div class="bar" id="langbar"><i style="flex:1;background:var(--line)"></i></div>
+    <div class="legend" id="langlegend"><span class="skeleton">reading the API…</span></div>
+    <p class="caveat">
+      Read per repository from the API, so this is real source rather than repository size —
+      counting the latter would put a folder of datasets above every line of C here. LaTeX, HTML
+      and build files are left out for the same reason: the thesis alone carries half a megabyte
+      of typesetting. Even then, bytes are not where the work went. A Flex/Bison parser is
+      60&nbsp;KB and an RTL design is smaller still, and the reverse-engineering work lives in
+      private repositories that this cannot see.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>The bench</h2>
+    <p class="sub">What the work above actually runs on.</p>
+    <div class="specs">
+      <div class="spec">
+        <h3>Compute</h3>
+        <dl>
+          <dt>chassis</dt><dd>Gigabyte T181-G20, bare metal</dd>
+          <dt>cpu</dt><dd>2 × Xeon Platinum 8171M, 52 cores</dd>
+          <dt>gpu</dt><dd>4 × Tesla V100 SXM2, NVLink</dd>
+          <dt>runs</dt><dd>local LLMs (vLLM, Open-WebUI), Docker swarm</dd>
+          <dt>driven by</dt><dd><a href="https://github.com/PabloSoage/redfishctl">redfishctl</a>, over Redfish</dd>
+        </dl>
+      </div>
+      <div class="spec">
+        <h3>Programmable logic</h3>
+        <dl>
+          <dt>board</dt><dd>AMD Kria KV260, K26 SOM</dd>
+          <dt>device</dt><dd>Zynq UltraScale+ ZU5EV</dd>
+          <dt>carries</dt><dd><a href="https://github.com/PabloSoage/scanner64">scanner64</a>, 64-channel DDC bank</dd>
+          <dt>measured</dt><dd>6 400 M channel-samples/s at 0.535 W</dd>
+        </dl>
+      </div>
+      <div class="spec">
+        <h3>Vehicle</h3>
+        <dl>
+          <dt>interface</dt><dd>Scanmatik SM3, J2534 over Wi-Fi</dd>
+          <dt>bus</dt><dd>GMLAN, 500 kbps, ISO-TP</dd>
+          <dt>tooling</dt><dd><a href="https://github.com/PabloSoage/opendash">opendash</a>, protocol recovered from captures</dd>
+          <dt>verified</dt><dd>against a running engine</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Built as a single static page, no framework and no build step.
+    Repository data from the GitHub API, cached in your browser for an hour.
+    <br>Source: <a href="https://github.com/PabloSoage/pablosoage.github.io">pablosoage.github.io</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // Curated, because a repository description is one line and these deserve two.
+  // Live metadata is merged in from the API; if that fails, this still renders.
+  var PROJECTS = [
+    { repo: 'scanner64', lead: true, title: 'scanner64',
+      blurb: 'A 64-channel real-time digital down-converter bank in Verilog for the Kria KV260. One sample per cycle, fixed latency, dropped samples impossible by construction. Verified in hardware and benchmarked bit-exact against C, CUDA and Xeon builds — 11× a Tesla V100 and 40× a dual Xeon per watt.',
+      tags: ['Verilog', 'Vivado', 'DSP', 'CUDA', 'KV260'] },
+    { repo: 'opendash', lead: true, title: 'opendash',
+      blurb: 'An Android diagnostic app for an adapter with no public protocol. Recovered the wire format from packet captures, identified the frame signature as a CRC — which turned replaying captures into constructing messages — and confirmed all of it against a live vehicle. Ships an ELM327 bridge so any existing OBD app can drive the device.',
+      tags: ['Kotlin', 'Rust', 'CAN / ISO-TP', 'Reverse engineering'] },
+    { repo: 'Rustify', title: 'Rustify',
+      blurb: 'An Android music player on a native Rust core with a Compose front end: custom JNI bindings, GraphQL scraping, heuristic track matching and a zero-latency loopback stream proxy into ExoPlayer.',
+      tags: ['Rust', 'Kotlin', 'JNI'] },
+    { repo: 'NeuroSync-Framework', title: 'NeuroSync-Framework',
+      blurb: 'A synchronised pipeline for real-time EEG signal processing, isolating CPU-bound work such as FastICA in separate processes behind GUI, CLI and FastAPI interfaces. Bachelor’s thesis.',
+      tags: ['Python', 'DSP', 'Multiprocessing'] },
+    { repo: 'Denso-ECU-Toolkit', title: 'Denso-ECU-Toolkit',
+      blurb: 'A toolchain for extracting, mapping and visualising calibration parameters out of Denso ECU images, with Ghidra scripts doing heuristic memory scanning.',
+      tags: ['Python', 'Ghidra', 'Automotive'] },
+    { repo: 'C-Flex-Bison-HTML-Parser', title: 'HTML DOM parser in C',
+      blurb: 'A DOM parser written from scratch: Flex and Bison for lexing and parsing, compiled to a shared library and bound to Python through ctypes. Valgrind-clean.',
+      tags: ['C', 'Flex / Bison', 'FFI'] },
+    { repo: 'OCaml-Lambda-Interpreter', title: 'Lambda calculus interpreter',
+      blurb: 'A statically typed extended lambda calculus: ocamllex/ocamlyacc front end, a type checker with aliases and structural subtyping, recursion through a fixed-point combinator, and a REPL with a persistent context.',
+      tags: ['OCaml', 'Type systems'] },
+    { repo: 'ASP-Constraint-Solvers', title: 'ASP constraint solvers',
+      blurb: 'Declarative models in Answer Set Programming for NP-hard multi-agent spatio-temporal planning and graph topology problems.',
+      tags: ['Clingo', 'Formal logic'] },
+    { repo: 'redfishctl', title: 'redfishctl',
+      blurb: 'A Rust terminal UI that controls and monitors a server’s BMC over Redfish — sensors, charts, power and the event log — with no ipmitool and no web interface.',
+      tags: ['Rust', 'TUI', 'Redfish'] },
+    { repo: 'Fabric2D', title: 'Fabric2D',
+      blurb: 'A procedural 2D engine with no commercial framework underneath: multithreaded Jump Point Search pathfinding, graph-based generation and native FMOD audio.',
+      tags: ['C / C++', 'Pathfinding'] }
+  ];
+
+  // Colours borrowed from GitHub's own language palette, so the bar reads the
+  // way people expect it to.
+  var LANG_COLOUR = {
+    Python: '#3572A5', Rust: '#dea584', Kotlin: '#A97BFF', C: '#555555', 'C++': '#f34b7d',
+    Java: '#b07219', OCaml: '#ef7a08', Julia: '#a270ba', JavaScript: '#f1e05a',
+    TypeScript: '#3178c6', Verilog: '#b2b7f8', SystemVerilog: '#DAE1C2', HTML: '#e34c26',
+    CSS: '#663399', Shell: '#89e051', Makefile: '#427819', Tcl: '#e4cc98',
+    'Jupyter Notebook': '#DA5B0B', TeX: '#3D6117', PowerShell: '#012456', Dockerfile: '#384d54'
+  };
+
+  // Markup, typesetting and build glue are not what this bar is for: the
+  // thesis carries 500 KB of LaTeX, which would sit above every language
+  // actually written here.
+  var NOT_CODE = {
+    TeX: 1, HTML: 1, CSS: 1, Makefile: 1, CMake: 1, Dockerfile: 1, Shell: 1,
+    Batchfile: 1, PowerShell: 1, 'Jupyter Notebook': 1, Roff: 1, M4: 1
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var CACHE_KEY = 'ps.repos.v1';
+  var LANG_KEY = 'ps.langs.v1';
+  var CACHE_MS = 60 * 60 * 1000;
+
+  function cached() {
+    try {
+      var raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      return (Date.now() - o.at < CACHE_MS) ? o.data : null;
+    } catch (e) { return null; }
+  }
+
+  function store(data) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data: data })); }
+    catch (e) { /* private mode, or full: the page works without it */ }
+  }
+
+  function ago(iso) {
+    var d = Math.floor((Date.now() - new Date(iso)) / 86400000);
+    if (d <= 0) return 'today';
+    if (d === 1) return 'yesterday';
+    if (d < 30) return d + ' days ago';
+    if (d < 365) return Math.round(d / 30) + ' months ago';
+    return Math.round(d / 365) + ' years ago';
+  }
+
+  function card(p, live) {
+    var el = document.createElement('article');
+    el.className = 'card' + (p.lead ? ' lead' : '');
+    var url = 'https://github.com/PabloSoage/' + p.repo;
+
+    var h = document.createElement('h3');
+    var a = document.createElement('a');
+    a.href = url; a.textContent = p.title; a.rel = 'noopener';
+    h.appendChild(a); el.appendChild(h);
+
+    var para = document.createElement('p');
+    para.textContent = p.blurb; el.appendChild(para);
+
+    var tags = document.createElement('div');
+    tags.className = 'tags';
+    p.tags.forEach(function (t) {
+      var s = document.createElement('span');
+      s.className = 'tag'; s.textContent = t; tags.appendChild(s);
+    });
+    el.appendChild(tags);
+
+    if (live) {
+      var m = document.createElement('div');
+      m.className = 'meta';
+      var lang = document.createElement('span');
+      var colour = LANG_COLOUR[live.language] || 'var(--faint)';
+      lang.innerHTML = '<i class="dot" style="background:' + colour + '"></i>';
+      lang.appendChild(document.createTextNode(live.language || '—'));
+      m.appendChild(lang);
+      if (live.stargazers_count) {
+        var st = document.createElement('span');
+        st.textContent = '★ ' + live.stargazers_count;
+        m.appendChild(st);
+      }
+      var up = document.createElement('span');
+      up.textContent = 'updated ' + ago(live.pushed_at);
+      m.appendChild(up);
+      el.appendChild(m);
+    }
+    return el;
+  }
+
+  function render(repos) {
+    var byName = {};
+    (repos || []).forEach(function (r) { byName[r.name.toLowerCase()] = r; });
+
+    var grid = $('projects');
+    grid.textContent = '';
+    PROJECTS.forEach(function (p) {
+      grid.appendChild(card(p, byName[p.repo.toLowerCase()]));
+    });
+
+    if (!repos) return;
+
+    // ── counters ──
+    var own = repos.filter(function (r) { return !r.fork && !r.archived; });
+    var stars = repos.reduce(function (n, r) { return n + r.stargazers_count; }, 0);
+    var newest = repos.reduce(function (a, r) {
+      return (!a || new Date(r.pushed_at) > new Date(a)) ? r.pushed_at : a;
+    }, null);
+
+    $('c-repos').textContent = own.length;
+    $('c-stars').textContent = stars;
+    $('c-push').textContent = newest ? ago(newest) : '—';
+    languages();
+
+  }
+
+  // The repository list carries `size`, which is the whole repository in KB —
+  // a dataset, a vendored library and a stripped binary all included. Summing
+  // that per primary language says a 200 MB folder of notebooks outweighs every
+  // line of C here, which is false. The per-repository `languages` endpoint
+  // returns actual bytes per language, so it is asked once per listed project
+  // and the answer is cached with everything else.
+  function paint(bytes) {
+    var langs = Object.keys(bytes).filter(function (k) { return !NOT_CODE[k]; })
+      .map(function (k) { return [k, bytes[k]]; })
+      .sort(function (a, b) { return b[1] - a[1]; });
+    var total = langs.reduce(function (n, l) { return n + l[1]; }, 0);
+    if (!total) return;
+
+    $('c-langs').textContent = langs.length;
+    var bar = $('langbar'), legend = $('langlegend');
+    bar.textContent = ''; legend.textContent = '';
+    var shown = langs.slice(0, 8);
+    var rest = total - shown.reduce(function (n, l) { return n + l[1]; }, 0);
+
+    shown.concat(rest > 0 ? [['other', rest]] : []).forEach(function (l) {
+      var pct = (l[1] / total) * 100;
+      var colour = LANG_COLOUR[l[0]] || 'var(--faint)';
+      var i = document.createElement('i');
+      i.style.flex = String(pct); i.style.background = colour;
+      i.title = l[0] + ' ' + pct.toFixed(1) + '%';
+      bar.appendChild(i);
+
+      var s = document.createElement('span');
+      s.innerHTML = '<i style="background:' + colour + '"></i>';
+      s.appendChild(document.createTextNode(l[0] + ' ' + pct.toFixed(1) + '%'));
+      legend.appendChild(s);
+    });
+  }
+
+  function languages() {
+    var hit = null;
+    try {
+      var raw = localStorage.getItem(LANG_KEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (Date.now() - o.at < CACHE_MS) hit = o.data;
+      }
+    } catch (e) { /* no storage, ask again */ }
+    if (hit) { paint(hit); return; }
+
+    Promise.all(PROJECTS.map(function (p) {
+      return fetch('https://api.github.com/repos/PabloSoage/' + p.repo + '/languages')
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; });
+    })).then(function (all) {
+      var bytes = {};
+      all.forEach(function (one) {
+        Object.keys(one).forEach(function (k) { bytes[k] = (bytes[k] || 0) + one[k]; });
+      });
+      try { localStorage.setItem(LANG_KEY, JSON.stringify({ at: Date.now(), data: bytes })); }
+      catch (e) { /* fine */ }
+      paint(bytes);
+    });
+  }
+
+  var hit = cached();
+  if (hit) { render(hit); return; }
+
+  // One request, and the page is useful whether or not it arrives: an
+  // unauthenticated caller gets sixty an hour, shared with everyone behind the
+  // same address.
+  fetch('https://api.github.com/users/PabloSoage/repos?per_page=100&sort=pushed')
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (data) { store(data); render(data); })
+    .catch(function () {
+      render(null);
+      $('langlegend').innerHTML =
+        '<span class="skeleton">GitHub’s API did not answer — rate limit, most likely. ' +
+        'The projects above are unaffected.</span>';
+    });
+})();
+</script>
+</body>
+</html>
