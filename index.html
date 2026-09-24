@@ -194,8 +194,8 @@
   <div class="wrap">
     <h2>Selected work</h2>
     <p class="sub">
-      Repository metadata below — language, stars, last push — is read live from the GitHub API,
-      so it is never out of date with the code.
+      Repository metadata below — language, stars, last push — comes from the GitHub API,
+      refreshed every six hours, so it does not drift from the code.
     </p>
     <div class="grid" id="projects"></div>
   </div>
@@ -236,9 +236,9 @@
     <h2>Languages, measured</h2>
     <p class="sub">Bytes of source across the projects listed above, markup and build glue excluded.</p>
     <div class="bar" id="langbar"><i style="flex:1;background:var(--line)"></i></div>
-    <div class="legend" id="langlegend"><span class="skeleton">reading the API…</span></div>
+    <div class="legend" id="langlegend"><span class="skeleton">loading…</span></div>
     <p class="caveat">
-      Read per repository from the API, so this is real source rather than repository size —
+      Counted per repository, so this is real source rather than repository size —
       counting the latter would put a folder of datasets above every line of C here. LaTeX, HTML
       and build files are left out for the same reason: the thesis alone carries half a megabyte
       of typesetting. Even then, bytes are not where the work went. A Flex/Bison parser is
@@ -268,11 +268,8 @@
     <div class="months" id="months"></div>
     <button class="more" id="more" type="button" hidden>Show more activity</button>
     <p class="caveat">
-      Private repositories count towards the calendar but are never named, so the months
-      below only list public repositories. GitHub serves the calendar to signed-in callers
-      only; this page reads it through
-      <a href="https://github.com/grubersjoe/github-contributions-api" rel="noopener">github-contributions-api</a>,
-      which takes it from the public profile.
+      Private repositories count towards the calendar but are never named, so the commits
+      and repositories listed under each month are the public ones only.
     </p>
   </div>
 </section>
@@ -317,7 +314,8 @@
 <footer>
   <div class="wrap">
     Built as a single static page, no framework and no build step.
-    Repository data from the GitHub API, cached in your browser for an hour.
+    GitHub data is collected every six hours by a workflow in this repository, so the page
+    itself never calls the API.
     <br>Source: <a href="https://github.com/PabloSoage/pablosoage.github.io">pablosoage.github.io</a>
   </div>
 </footer>
@@ -383,24 +381,6 @@
   };
 
   var $ = function (id) { return document.getElementById(id); };
-  var CACHE_KEY = 'ps.repos.v1';
-  var LANG_KEY = 'ps.langs.v1';
-  var CACHE_MS = 60 * 60 * 1000;
-
-  function cached() {
-    try {
-      var raw = localStorage.getItem(CACHE_KEY);
-      if (!raw) return null;
-      var o = JSON.parse(raw);
-      return (Date.now() - o.at < CACHE_MS) ? o.data : null;
-    } catch (e) { return null; }
-  }
-
-  function store(data) {
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data: data })); }
-    catch (e) { /* private mode, or full: the page works without it */ }
-  }
-
   function ago(iso) {
     var d = Math.floor((Date.now() - new Date(iso)) / 86400000);
     if (d <= 0) return 'today';
@@ -481,8 +461,6 @@
     $('c-repos').textContent = own.length;
     $('c-stars').textContent = stars;
     $('c-push').textContent = newest ? ago(newest) : '—';
-    languages();
-
     activity.repos = repos;
     months();
   }
@@ -490,10 +468,9 @@
   // ── contribution calendar ──────────────────────────────────────────
   // Dates arrive as plain YYYY-MM-DD and are read as UTC throughout, so a
   // visitor in another time zone sees the same squares the profile shows.
-  var CONTRIB_KEY = 'ps.contrib.v1';
   var MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
                'August', 'September', 'October', 'November', 'December'];
-  var activity = { days: null, repos: null, open: false };
+  var activity = { days: null, repos: null, commits: {}, open: false };
 
   function utc(d) { return new Date(d + 'T00:00:00Z'); }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
@@ -503,11 +480,9 @@
   }
 
   function calendar(data) {
-    var days = data.contributions;
+    var days = data.days;
     activity.days = days;
-    var total = data.total && data.total.lastYear != null
-      ? data.total.lastYear
-      : days.reduce(function (n, d) { return n + d.count; }, 0);
+    var total = data.total;
 
     $('cal-total').textContent = total.toLocaleString('en') + ' contributions in the last year';
     $('c-contrib').textContent = total.toLocaleString('en');
@@ -562,9 +537,8 @@
     months();
   }
 
-  // GitHub's own list says "N commits in M repositories", which needs a
-  // signed-in query this page cannot make. What it can say honestly is how
-  // much happened each month, and which public repositories were started.
+  // Like the list under the profile calendar, but only public repositories
+  // are named: commits to private ones count in the calendar and nowhere else.
   function months() {
     var days = activity.days;
     if (!days) return;
@@ -608,6 +582,22 @@
         : 'No recorded activity';
       ul.appendChild(li);
 
+      var pushed = (activity.commits[key] || { public: [] }).public;
+      if (pushed.length) {
+        var n = pushed.reduce(function (s, r) { return s + r.commits; }, 0);
+        var k = document.createElement('li');
+        k.appendChild(document.createTextNode(plural(n, 'commit', 'commits') + ' in ' +
+          plural(pushed.length, 'public repository', 'public repositories') + ': '));
+        pushed.forEach(function (r, j) {
+          if (j) k.appendChild(document.createTextNode(', '));
+          var a = document.createElement('a');
+          a.href = r.url; a.rel = 'noopener'; a.textContent = r.name;
+          k.appendChild(a);
+          k.appendChild(document.createTextNode(' (' + r.commits + ')'));
+        });
+        ul.appendChild(k);
+      }
+
       if (m.created.length) {
         var c = document.createElement('li');
         c.appendChild(document.createTextNode('Created ' + (m.created.length === 1 ? '' : m.created.length + ' repositories: ')));
@@ -633,35 +623,12 @@
     months();
   });
 
-  (function contributions() {
-    try {
-      var raw = localStorage.getItem(CONTRIB_KEY);
-      if (raw) {
-        var o = JSON.parse(raw);
-        if (Date.now() - o.at < CACHE_MS) { calendar(o.data); return; }
-      }
-    } catch (e) { /* no storage, ask again */ }
-
-    fetch('https://github-contributions-api.jogruber.de/v4/PabloSoage?y=last')
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (data) {
-        if (!data.contributions || !data.contributions.length) throw new Error('empty');
-        try { localStorage.setItem(CONTRIB_KEY, JSON.stringify({ at: Date.now(), data: data })); }
-        catch (e) { /* fine */ }
-        calendar(data);
-      })
-      .catch(function () {
-        $('cal').innerHTML = '<span class="skeleton">The calendar did not load this time. ' +
-          'It is always on <a href="https://github.com/PabloSoage">the GitHub profile</a>.</span>';
-      });
-  })();
-
   // The repository list carries `size`, which is the whole repository in KB —
   // a dataset, a vendored library and a stripped binary all included. Summing
   // that per primary language says a 200 MB folder of notebooks outweighs every
   // line of C here, which is false. The per-repository `languages` endpoint
-  // returns actual bytes per language, so it is asked once per listed project
-  // and the answer is cached with everything else.
+  // returns actual bytes per language; the workflow collects it per
+  // repository, and only the projects listed above are summed here.
   function paint(bytes) {
     var langs = Object.keys(bytes).filter(function (k) { return !NOT_CODE[k]; })
       .map(function (k) { return [k, bytes[k]]; })
@@ -690,46 +657,32 @@
     });
   }
 
-  function languages() {
-    var hit = null;
-    try {
-      var raw = localStorage.getItem(LANG_KEY);
-      if (raw) {
-        var o = JSON.parse(raw);
-        if (Date.now() - o.at < CACHE_MS) hit = o.data;
-      }
-    } catch (e) { /* no storage, ask again */ }
-    if (hit) { paint(hit); return; }
-
-    Promise.all(PROJECTS.map(function (p) {
-      return fetch('https://api.github.com/repos/PabloSoage/' + p.repo + '/languages')
-        .then(function (r) { return r.ok ? r.json() : {}; })
-        .catch(function () { return {}; });
-    })).then(function (all) {
-      var bytes = {};
-      all.forEach(function (one) {
-        Object.keys(one).forEach(function (k) { bytes[k] = (bytes[k] || 0) + one[k]; });
-      });
-      try { localStorage.setItem(LANG_KEY, JSON.stringify({ at: Date.now(), data: bytes })); }
-      catch (e) { /* fine */ }
-      paint(bytes);
+  function languages(perRepo) {
+    var bytes = {};
+    PROJECTS.forEach(function (p) {
+      var one = perRepo[p.repo] || {};
+      Object.keys(one).forEach(function (k) { bytes[k] = (bytes[k] || 0) + one[k]; });
     });
+    paint(bytes);
   }
 
-  var hit = cached();
-  if (hit) { render(hit); return; }
-
-  // One request, and the page is useful whether or not it arrives: an
-  // unauthenticated caller gets sixty an hour, shared with everyone behind the
-  // same address.
-  fetch('https://api.github.com/users/PabloSoage/repos?per_page=100&sort=pushed')
+  // Everything GitHub-side comes from data.json, which a workflow in this
+  // repository rewrites every six hours. The API allows an unauthenticated
+  // caller sixty requests an hour per address, so a page asking it directly
+  // stops working after a few visits from one network.
+  fetch('data.json', { cache: 'no-cache' })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function (data) { store(data); render(data); })
+    .then(function (data) {
+      render(data.repos);
+      languages(data.languages);
+      activity.commits = data.commits || {};
+      calendar(data.calendar);
+    })
     .catch(function () {
       render(null);
-      $('langlegend').innerHTML =
-        '<span class="skeleton">GitHub’s API did not answer — rate limit, most likely. ' +
-        'The projects above are unaffected.</span>';
+      $('langlegend').innerHTML = '<span class="skeleton">The statistics did not load this time.</span>';
+      $('cal').innerHTML = '<span class="skeleton">The calendar did not load this time. ' +
+        'It is always on <a href="https://github.com/PabloSoage">the GitHub profile</a>.</span>';
     });
 })();
 </script>

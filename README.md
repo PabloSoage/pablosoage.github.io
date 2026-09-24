@@ -5,11 +5,16 @@ A portfolio page, and the Android App Links verification for
 
 ## Files
 
-- **`index.html`** — the whole site. One file, no framework and no build step: the layout is
-  static, and the repository metadata (language, stars, last push, the language bar, the
-  counters) is read from the GitHub API in the browser and cached in `localStorage` for an hour.
-  It renders correctly with the API unavailable, which matters because an unauthenticated caller
-  gets sixty requests an hour shared with everyone behind the same address.
+- **`index.html`** — the whole site. One file, no framework and no build step. Everything it
+  shows about the GitHub account — repositories, the language bar, the counters, the
+  contribution calendar and the monthly activity — is read from `data.json` beside it. The
+  page never calls the GitHub API: unauthenticated, that allows sixty requests an hour per
+  address, and asking it on every visit broke the page after a few visits from one network.
+- **`data.json`** — generated; do not edit by hand. `scripts/refresh.mjs` writes it and
+  `.github/workflows/refresh.yml` runs that every six hours, committing only when something
+  changed. Run it on demand from the Actions tab (*Refresh GitHub data → Run workflow*). The
+  script drops every private repository itself rather than trusting the token not to see them,
+  because it is also run by hand with a personal token that can.
 - **`.well-known/assetlinks.json`** — declares `com.varuna.rustify` as the verified handler for
   `https://pablosoage.github.io/r/...` wrapper links, with the SHA-256 fingerprints of the debug
   and release signing keys. Android reads this at install time to auto-verify App Links without
