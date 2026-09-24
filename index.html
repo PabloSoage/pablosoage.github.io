@@ -108,6 +108,54 @@
   .spec dt { color: var(--faint); font-family: var(--mono); font-size: 0.76rem; }
   .spec dd { margin: 0; color: var(--muted); }
 
+  /* ── contribution calendar ──────────────────────────────────────── */
+  .cal-head { display: flex; justify-content: space-between; align-items: baseline;
+              flex-wrap: wrap; gap: 6px 16px; margin-bottom: 12px; }
+  .cal-head b { font-family: var(--mono); font-size: 1.05rem; }
+  .cal-box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+             padding: 16px 18px 12px; }
+  /* The year is ~53 weeks wide; on a phone it scrolls inside its box rather
+     than pushing the page sideways, and starts scrolled to the recent end. */
+  .cal-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .cal { --cell: 11px; --gap: 3px; display: grid; grid-template-columns: auto 1fr;
+         column-gap: 8px; width: max-content; }
+  .cal-months, .cal-grid { display: grid; grid-auto-flow: column;
+         grid-auto-columns: var(--cell); gap: var(--gap); }
+  .cal-months { grid-column: 2; height: 16px; font-size: 0.68rem; color: var(--faint); }
+  .cal-months span { white-space: nowrap; }
+  .cal-days { display: grid; grid-template-rows: repeat(7, var(--cell)); gap: var(--gap);
+              font-size: 0.64rem; color: var(--faint); line-height: var(--cell); }
+  .cal-grid { grid-template-rows: repeat(7, var(--cell)); }
+  .cal-grid i { width: var(--cell); height: var(--cell); border-radius: 2px; background: var(--line); }
+  .cal-grid i[data-l="1"] { background: color-mix(in srgb, var(--accent) 30%, var(--panel)); }
+  .cal-grid i[data-l="2"] { background: color-mix(in srgb, var(--accent) 55%, var(--panel)); }
+  .cal-grid i[data-l="3"] { background: color-mix(in srgb, var(--accent) 78%, var(--panel)); }
+  .cal-grid i[data-l="4"] { background: var(--accent); }
+  .cal-grid i.pad { visibility: hidden; }
+  .cal-foot { display: flex; justify-content: flex-end; align-items: center; gap: 4px;
+              font-size: 0.7rem; color: var(--faint); margin-top: 10px; }
+  .cal-foot i { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+  .cal-foot span { margin: 0 4px; }
+
+  .months { margin-top: 30px; }
+  .month { position: relative; padding: 0 0 18px 26px; border-left: 2px solid var(--line); margin-left: 6px; }
+  .month:last-child { padding-bottom: 0; }
+  .month::before { content: ""; position: absolute; left: -7px; top: 5px; width: 12px; height: 12px;
+                   border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+  .month h3 { margin: 0 0 6px; font-size: 0.9rem; }
+  .month h3 span { color: var(--faint); font-weight: 400; }
+  .month ul { margin: 0; padding: 0; list-style: none; font-size: 0.88rem; color: var(--muted); }
+  .month li + li { margin-top: 3px; }
+  .month[hidden] { display: none; }
+  .more { margin-top: 20px; width: 100%; padding: 10px; font: inherit; font-family: var(--mono);
+          font-size: 0.8rem; color: var(--accent); background: var(--panel); cursor: pointer;
+          border: 1px solid var(--line); border-radius: var(--radius); }
+  .more:hover { border-color: var(--accent); }
+
+  .card h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .card h3 a.site { font-size: 0.72rem; font-weight: 400; white-space: nowrap; color: var(--accent); }
+  @media (min-width: 820px) { .cal { --cell: 13px; } .cal-foot i { width: 13px; height: 13px; } }
+
   footer { padding: 40px 0 60px; color: var(--faint); font-size: 0.82rem; }
   .skeleton { color: var(--faint); font-family: var(--mono); font-size: 0.82rem; }
   @media (max-width: 560px) { header { padding-top: 48px; } section { padding: 40px 0; } }
@@ -130,12 +178,14 @@
       <a href="https://github.com/PabloSoage/scanner64">scanner64</a>
       <a href="https://github.com/PabloSoage/opendash">opendash</a>
       <a href="https://github.com/PabloSoage/Rustify">Rustify</a>
+      <a href="https://pablosoage.github.io/openfuel/">openfuel</a>
     </nav>
     <div class="counters" id="counters">
       <div class="counter"><b id="c-repos">—</b><span>public repos</span></div>
       <div class="counter"><b id="c-stars">—</b><span>stars</span></div>
       <div class="counter"><b id="c-langs">—</b><span>languages</span></div>
       <div class="counter"><b id="c-push">—</b><span>last push</span></div>
+      <div class="counter"><b id="c-contrib">—</b><span>contributions, 12 mo</span></div>
     </div>
   </div>
 </header>
@@ -194,6 +244,35 @@
       of typesetting. Even then, bytes are not where the work went. A Flex/Bison parser is
       60&nbsp;KB and an RTL design is smaller still, and the reverse-engineering work lives in
       private repositories that this cannot see.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 id="activity">Activity</h2>
+    <p class="sub">The contribution calendar from the GitHub profile, month by month.</p>
+    <div class="cal-head"><b id="cal-total">—</b></div>
+    <div class="cal-box">
+      <div class="cal-scroll" id="cal-scroll">
+        <div class="cal" id="cal"><span class="skeleton">reading the calendar…</span></div>
+      </div>
+      <div class="cal-foot" aria-hidden="true">
+        <span>Less</span><i style="background:var(--line)"></i>
+        <i style="background:color-mix(in srgb, var(--accent) 30%, var(--panel))"></i>
+        <i style="background:color-mix(in srgb, var(--accent) 55%, var(--panel))"></i>
+        <i style="background:color-mix(in srgb, var(--accent) 78%, var(--panel))"></i>
+        <i style="background:var(--accent)"></i><span>More</span>
+      </div>
+    </div>
+    <div class="months" id="months"></div>
+    <button class="more" id="more" type="button" hidden>Show more activity</button>
+    <p class="caveat">
+      Private repositories count towards the calendar but are never named, so the months
+      below only list public repositories. GitHub serves the calendar to signed-in callers
+      only; this page reads it through
+      <a href="https://github.com/grubersjoe/github-contributions-api" rel="noopener">github-contributions-api</a>,
+      which takes it from the public profile.
     </p>
   </div>
 </section>
@@ -259,6 +338,9 @@
     { repo: 'Rustify', title: 'Rustify',
       blurb: 'An Android music player on a native Rust core with a Compose front end: custom JNI bindings, GraphQL scraping, heuristic track matching and a zero-latency loopback stream proxy into ExoPlayer.',
       tags: ['Rust', 'Kotlin', 'JNI'] },
+    { repo: 'openfuel', title: 'openfuel', site: 'https://pablosoage.github.io/openfuel/',
+      blurb: 'An Android app for Spanish fuel prices on the Ministry’s open data: every station in your region on a map, each litre broken down into VAT and excise, published loyalty discounts applied to the price, and its recent history. Offline-first, no keys, no trackers.',
+      tags: ['Kotlin', 'Jetpack Compose', 'MapLibre', 'Open data'] },
     { repo: 'NeuroSync-Framework', title: 'NeuroSync-Framework',
       blurb: 'A synchronised pipeline for real-time EEG signal processing, isolating CPU-bound work such as FastICA in separate processes behind GUI, CLI and FastAPI interfaces. Bachelor’s thesis.',
       tags: ['Python', 'DSP', 'Multiprocessing'] },
@@ -336,7 +418,14 @@
     var h = document.createElement('h3');
     var a = document.createElement('a');
     a.href = url; a.textContent = p.title; a.rel = 'noopener';
-    h.appendChild(a); el.appendChild(h);
+    h.appendChild(a);
+    if (p.site) {
+      var s = document.createElement('a');
+      s.className = 'site'; s.href = p.site; s.rel = 'noopener';
+      s.textContent = 'project page ↗';
+      h.appendChild(s);
+    }
+    el.appendChild(h);
 
     var para = document.createElement('p');
     para.textContent = p.blurb; el.appendChild(para);
@@ -394,7 +483,178 @@
     $('c-push').textContent = newest ? ago(newest) : '—';
     languages();
 
+    activity.repos = repos;
+    months();
   }
+
+  // ── contribution calendar ──────────────────────────────────────────
+  // Dates arrive as plain YYYY-MM-DD and are read as UTC throughout, so a
+  // visitor in another time zone sees the same squares the profile shows.
+  var CONTRIB_KEY = 'ps.contrib.v1';
+  var MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+               'August', 'September', 'October', 'November', 'December'];
+  var activity = { days: null, repos: null, open: false };
+
+  function utc(d) { return new Date(d + 'T00:00:00Z'); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function dayName(d) {
+    var t = utc(d);
+    return t.getUTCDate() + ' ' + MONTH[t.getUTCMonth()].slice(0, 3) + ' ' + t.getUTCFullYear();
+  }
+
+  function calendar(data) {
+    var days = data.contributions;
+    activity.days = days;
+    var total = data.total && data.total.lastYear != null
+      ? data.total.lastYear
+      : days.reduce(function (n, d) { return n + d.count; }, 0);
+
+    $('cal-total').textContent = total.toLocaleString('en') + ' contributions in the last year';
+    $('c-contrib').textContent = total.toLocaleString('en');
+
+    var cal = $('cal');
+    cal.textContent = '';
+    cal.setAttribute('role', 'img');
+    cal.setAttribute('aria-label', total + ' contributions between ' +
+      dayName(days[0].date) + ' and ' + dayName(days[days.length - 1].date));
+
+    var monthsRow = document.createElement('div'); monthsRow.className = 'cal-months';
+    var dayCol = document.createElement('div'); dayCol.className = 'cal-days';
+    var grid = document.createElement('div'); grid.className = 'cal-grid';
+    ['', 'Mon', '', 'Wed', '', 'Fri', ''].forEach(function (t) {
+      var s = document.createElement('span'); s.textContent = t; dayCol.appendChild(s);
+    });
+
+    // Weeks run Sunday to Saturday, as on the profile: pad the first column
+    // up to the weekday the range starts on.
+    var lead = utc(days[0].date).getUTCDay();
+    for (var k = 0; k < lead; k++) {
+      var p = document.createElement('i'); p.className = 'pad'; grid.appendChild(p);
+    }
+
+    var lastLabel = -3;
+    days.forEach(function (d, n) {
+      var cell = document.createElement('i');
+      cell.setAttribute('data-l', String(d.level));
+      cell.title = (d.count ? plural(d.count, 'contribution', 'contributions') : 'No contributions') +
+                   ' on ' + dayName(d.date);
+      grid.appendChild(cell);
+
+      // A month is labelled at the column holding its first day, unless that
+      // is too close to the previous label to fit (the partial month the
+      // range begins in).
+      var t = utc(d.date), col = Math.floor((n + lead) / 7);
+      if ((t.getUTCDate() === 1 || n === 0) && col - lastLabel >= 3) {
+        var m = document.createElement('span');
+        m.textContent = MONTH[t.getUTCMonth()].slice(0, 3);
+        m.style.gridColumn = String(col + 1);
+        monthsRow.appendChild(m);
+        lastLabel = col;
+      }
+    });
+
+    cal.appendChild(document.createElement('span'));
+    cal.appendChild(monthsRow);
+    cal.appendChild(dayCol);
+    cal.appendChild(grid);
+    var sc = $('cal-scroll'); sc.scrollLeft = sc.scrollWidth;
+
+    months();
+  }
+
+  // GitHub's own list says "N commits in M repositories", which needs a
+  // signed-in query this page cannot make. What it can say honestly is how
+  // much happened each month, and which public repositories were started.
+  function months() {
+    var days = activity.days;
+    if (!days) return;
+
+    var byMonth = {}, order = [];
+    days.forEach(function (d) {
+      var key = d.date.slice(0, 7);
+      if (!byMonth[key]) { byMonth[key] = { count: 0, active: 0, best: null, first: d.date, created: [] }; order.push(key); }
+      var m = byMonth[key];
+      m.count += d.count;
+      if (d.count) m.active++;
+      if (!m.best || d.count > m.best.count) m.best = d;
+    });
+    (activity.repos || []).forEach(function (r) {
+      var key = r.created_at.slice(0, 7);
+      if (!r.fork && byMonth[key]) byMonth[key].created.push(r);
+    });
+
+    var list = $('months');
+    list.textContent = '';
+    order.reverse().forEach(function (key, i) {
+      var m = byMonth[key], t = utc(key + '-01');
+      var el = document.createElement('div');
+      el.className = 'month';
+      if (i >= 3 && !activity.open) el.hidden = true;
+
+      var h = document.createElement('h3');
+      h.textContent = MONTH[t.getUTCMonth()] + ' ';
+      var y = document.createElement('span');
+      // The range starts a year ago today, so its first month is partial.
+      y.textContent = m.first.slice(8) !== '01'
+        ? 'from ' + dayName(m.first)
+        : String(t.getUTCFullYear());
+      h.appendChild(y); el.appendChild(h);
+
+      var ul = document.createElement('ul');
+      var li = document.createElement('li');
+      li.textContent = m.count
+        ? plural(m.count, 'contribution', 'contributions') + ' on ' + plural(m.active, 'day', 'days') +
+          ' — busiest ' + dayName(m.best.date).slice(0, -5) + ', with ' + m.best.count
+        : 'No recorded activity';
+      ul.appendChild(li);
+
+      if (m.created.length) {
+        var c = document.createElement('li');
+        c.appendChild(document.createTextNode('Created ' + (m.created.length === 1 ? '' : m.created.length + ' repositories: ')));
+        m.created.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; })
+          .forEach(function (r, j) {
+            if (j) c.appendChild(document.createTextNode(', '));
+            var a = document.createElement('a');
+            a.href = r.html_url; a.rel = 'noopener'; a.textContent = r.name;
+            c.appendChild(a);
+          });
+        ul.appendChild(c);
+      }
+      el.appendChild(ul);
+      list.appendChild(el);
+    });
+
+    var more = $('more');
+    more.hidden = activity.open || order.length <= 3;
+  }
+
+  $('more').addEventListener('click', function () {
+    activity.open = true;
+    months();
+  });
+
+  (function contributions() {
+    try {
+      var raw = localStorage.getItem(CONTRIB_KEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (Date.now() - o.at < CACHE_MS) { calendar(o.data); return; }
+      }
+    } catch (e) { /* no storage, ask again */ }
+
+    fetch('https://github-contributions-api.jogruber.de/v4/PabloSoage?y=last')
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (data) {
+        if (!data.contributions || !data.contributions.length) throw new Error('empty');
+        try { localStorage.setItem(CONTRIB_KEY, JSON.stringify({ at: Date.now(), data: data })); }
+        catch (e) { /* fine */ }
+        calendar(data);
+      })
+      .catch(function () {
+        $('cal').innerHTML = '<span class="skeleton">The calendar did not load this time. ' +
+          'It is always on <a href="https://github.com/PabloSoage">the GitHub profile</a>.</span>';
+      });
+  })();
 
   // The repository list carries `size`, which is the whole repository in KB —
   // a dataset, a vendored library and a stripped binary all included. Summing
