@@ -54,55 +54,79 @@ for (const r of repos) {
   languages[r.name] = await rest(`repos/${LOGIN}/${r.name}/languages`);
 }
 
-// ── contribution calendar ───────────────────────────────────────────────
+// ── contribution calendars ──────────────────────────────────────────────
+// One view for the last twelve months, as the profile opens with, and one per
+// calendar year the account has contributions in, as its year list offers.
 const LEVEL = { NONE: 0, FIRST_QUARTILE: 1, SECOND_QUARTILE: 2, THIRD_QUARTILE: 3, FOURTH_QUARTILE: 4 };
+const TODAY = new Date().toISOString().slice(0, 10);
 
-const cal = await graphql(`query($login: String!) {
-  user(login: $login) { contributionsCollection { contributionCalendar {
-    totalContributions
-    weeks { contributionDays { date contributionCount contributionLevel } }
-  } } }
-}`, { login: LOGIN });
-
-const calendar = cal.user.contributionsCollection.contributionCalendar;
-const days = calendar.weeks.flatMap((w) => w.contributionDays)
-  .map((d) => ({ date: d.date, count: d.contributionCount, level: LEVEL[d.contributionLevel] ?? 0 }));
-
-// ── commits per repository, month by month ──────────────────────────────
-// The API answers this per time window, and a window may not span more than
-// a year, so it is asked once per calendar month the calendar covers.
-const months = [...new Set(days.map((d) => d.date.slice(0, 7)))];
-const commits = {};
-for (const m of months) {
-  const [y, mo] = m.split('-').map(Number);
-  const from = new Date(Date.UTC(y, mo - 1, 1));
-  const to = new Date(Date.UTC(y, mo, 1) - 1000);
-  const q = await graphql(`query($login: String!, $from: DateTime!, $to: DateTime!) {
+async function calendarFor(from, to) {
+  const q = await graphql(`query($login: String!, $from: DateTime, $to: DateTime) {
     user(login: $login) { contributionsCollection(from: $from, to: $to) {
-      totalCommitContributions
-      commitContributionsByRepository(maxRepositories: 100) {
-        repository { name url isPrivate }
-        contributions(first: 100) { nodes { commitCount } }
+      contributionYears
+      contributionCalendar {
+        totalContributions
+        weeks { contributionDays { date contributionCount contributionLevel } }
       }
     } }
-  }`, { login: LOGIN, from: from.toISOString(), to: to.toISOString() });
-
+  }`, { login: LOGIN, from, to });
   const c = q.user.contributionsCollection;
-  const perRepo = c.commitContributionsByRepository
-    .filter((x) => !x.repository.isPrivate)
-    .map((x) => ({
-      name: x.repository.name, url: x.repository.url,
-      commits: x.contributions.nodes.reduce((n, k) => n + k.commitCount, 0),
-    }))
-    .filter((x) => x.commits > 0)
-    .sort((a, b) => b.commits - a.commits);
-  commits[m] = { total: c.totalCommitContributions, public: perRepo };
+  // A calendar year that is still running comes back through 31 December;
+  // the days that have not happened yet are dropped.
+  const days = c.contributionCalendar.weeks.flatMap((w) => w.contributionDays)
+    .filter((d) => d.date <= TODAY)
+    .map((d) => ({ date: d.date, count: d.contributionCount, level: LEVEL[d.contributionLevel] ?? 0 }));
+  return { years: c.contributionYears, total: c.contributionCalendar.totalContributions, days };
 }
 
-const data = {
-  repos, languages,
-  calendar: { total: calendar.totalContributions, days },
-  commits,
-};
+// ── commits per repository, month by month ──────────────────────────────
+// The API answers this per time window, so it is asked once per month of a
+// view, the window clipped to the days the view covers: the rolling year
+// starts mid-month. Identical windows are asked once across views.
+const asked = new Map();
+
+async function commitsBetween(from, to) {
+  const key = from + '|' + to;
+  if (!asked.has(key)) {
+    const q = await graphql(`query($login: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $login) { contributionsCollection(from: $from, to: $to) {
+        commitContributionsByRepository(maxRepositories: 100) {
+          repository { name url isPrivate }
+          contributions(first: 100) { nodes { commitCount } }
+        }
+      } }
+    }`, { login: LOGIN, from, to });
+    asked.set(key, q.user.contributionsCollection.commitContributionsByRepository
+      .filter((x) => !x.repository.isPrivate)
+      .map((x) => ({
+        name: x.repository.name, url: x.repository.url,
+        commits: x.contributions.nodes.reduce((n, k) => n + k.commitCount, 0),
+      }))
+      .filter((x) => x.commits > 0)
+      .sort((a, b) => b.commits - a.commits));
+  }
+  return asked.get(key);
+}
+
+async function view(id, label, from, to) {
+  const cal = await calendarFor(from, to);
+  const commits = {};
+  for (const m of [...new Set(cal.days.map((d) => d.date.slice(0, 7)))]) {
+    const inMonth = cal.days.filter((d) => d.date.startsWith(m));
+    const first = inMonth[0].date, last = inMonth[inMonth.length - 1].date;
+    commits[m] = { public: await commitsBetween(first + 'T00:00:00Z', last + 'T23:59:59Z') };
+  }
+  return { id, label, total: cal.total, days: cal.days, commits, years: cal.years };
+}
+
+const rolling = await view('last', 'Last 12 months', null, null);
+const views = [rolling];
+for (const y of rolling.years) {
+  views.push(await view(String(y), String(y), `${y}-01-01T00:00:00Z`, `${y}-12-31T23:59:59Z`));
+}
+for (const v of views) delete v.years;
+
+const data = { repos, languages, views };
 writeFileSync(OUT, JSON.stringify(data) + '\n');
-console.log(`${OUT}: ${repos.length} repos, ${days.length} days, ${calendar.totalContributions} contributions`);
+console.log(`${OUT}: ${repos.length} repos; ` +
+  views.map((v) => `${v.id} ${v.total} over ${v.days.length} days`).join(', '));

@@ -112,6 +112,13 @@
   .cal-head { display: flex; justify-content: space-between; align-items: baseline;
               flex-wrap: wrap; gap: 6px 16px; margin-bottom: 12px; }
   .cal-head b { font-family: var(--mono); font-size: 1.05rem; }
+  .years { display: flex; flex-wrap: wrap; gap: 6px; }
+  .years button { font: inherit; font-family: var(--mono); font-size: 0.74rem; padding: 4px 11px;
+                  border: 1px solid var(--line); border-radius: 999px; background: var(--panel);
+                  color: var(--muted); cursor: pointer; }
+  .years button:hover { border-color: var(--accent); color: var(--accent); }
+  .years button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent);
+                                       color: var(--bg); }
   .cal-box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
              padding: 16px 18px 12px; }
   /* The year is ~53 weeks wide; on a phone it scrolls inside its box rather
@@ -252,7 +259,7 @@
   <div class="wrap">
     <h2 id="activity">Activity</h2>
     <p class="sub">The contribution calendar from the GitHub profile, month by month.</p>
-    <div class="cal-head"><b id="cal-total">—</b></div>
+    <div class="cal-head"><b id="cal-total">—</b><nav class="years" id="years" aria-label="Year"></nav></div>
     <div class="cal-box">
       <div class="cal-scroll" id="cal-scroll">
         <div class="cal" id="cal"><span class="skeleton">reading the calendar…</span></div>
@@ -484,8 +491,8 @@
     activity.days = days;
     var total = data.total;
 
-    $('cal-total').textContent = total.toLocaleString('en') + ' contributions in the last year';
-    $('c-contrib').textContent = total.toLocaleString('en');
+    $('cal-total').textContent = total.toLocaleString('en') + (total === 1 ? ' contribution' : ' contributions') +
+      (data.id === 'last' ? ' in the last year' : ' in ' + data.label);
 
     var cal = $('cal');
     cal.textContent = '';
@@ -618,6 +625,30 @@
     more.hidden = activity.open || order.length <= 3;
   }
 
+  // The year list works like the one beside the profile calendar: the last
+  // twelve months first, then each calendar year the account was active in.
+  function years(views) {
+    var nav = $('years');
+    nav.textContent = '';
+    views.forEach(function (v) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = v.id === 'last' ? 'Last 12 months' : v.label;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', function () { show(v); });
+      v.button = b;
+      nav.appendChild(b);
+    });
+    show(views[0]);
+
+    function show(v) {
+      views.forEach(function (o) { o.button.setAttribute('aria-pressed', String(o === v)); });
+      activity.commits = v.commits || {};
+      activity.open = false;
+      calendar(v);
+    }
+  }
+
   $('more').addEventListener('click', function () {
     activity.open = true;
     months();
@@ -675,8 +706,8 @@
     .then(function (data) {
       render(data.repos);
       languages(data.languages);
-      activity.commits = data.commits || {};
-      calendar(data.calendar);
+      $('c-contrib').textContent = data.views[0].total.toLocaleString('en');
+      years(data.views);
     })
     .catch(function () {
       render(null);

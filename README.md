@@ -7,7 +7,8 @@ A portfolio page, and the Android App Links verification for
 
 - **`index.html`** — the whole site. One file, no framework and no build step. Everything it
   shows about the GitHub account — repositories, the language bar, the counters, the
-  contribution calendar and the monthly activity — is read from `data.json` beside it. The
+  contribution calendar for the last twelve months and for each year, and the monthly
+  activity — is read from `data.json` beside it. The
   page never calls the GitHub API: unauthenticated, that allows sixty requests an hour per
   address, and asking it on every visit broke the page after a few visits from one network.
 - **`data.json`** — generated; do not edit by hand. `scripts/refresh.mjs` writes it and
