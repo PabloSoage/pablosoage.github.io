@@ -237,7 +237,8 @@
 <script>
     // The desktop and iOS apps sign in through this same page; `state` says where the answer goes:
     // a port of the computer's own loopback, or back into the iOS app. On Android the app takes this
-    // address as an App Link and the page never loads. Any other state: nothing happens.
+    // address as an App Link and the page never loads. The web interface: its own address.
+    // Any other state: nothing happens.
     (function () {
         var query = new URLSearchParams(location.search);
         var state = query.get('state') || '';
@@ -246,6 +247,50 @@
             location.replace('http://127.0.0.1:' + desktop[1] + '/' + location.search);
         } else if (state.indexOf('rustify-ios-') === 0) {
             location.replace('rustify://oauth2redirect' + location.search);
+        } else {
+            var web = /^rustify-web-([A-Za-z0-9_-]{4,400})\./.exec(state);
+            if (web) toWeb(web[1]);
+        }
+
+        // The web interface (rustify-server) names its own address, base64url, in `state`. At home
+        // (loopback, a private address, a .local/.lan name) the answer goes straight there; to any
+        // other address only once the person says it is their server, since anyone can write a
+        // `state` and the answer is a code for their Drive.
+        function toWeb(encoded) {
+            var origin;
+            try {
+                origin = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
+            } catch (e) {
+                return;
+            }
+            if (!/^https?:\/\/[^\/?#@\s]+$/.test(origin)) return;
+            var target = origin + '/drive-callback.html' + location.search;
+            var host = new URL(origin).hostname.toLowerCase();
+            if (atHome(host)) {
+                location.replace(target);
+                return;
+            }
+            var box = document.createElement('div');
+            box.className = 'close-hint';
+            var text = document.createElement('p');
+            text.textContent = '¿Enviar la respuesta de Google a ' + host + '? Hazlo solo si es tu servidor Rustify.';
+            var go = document.createElement('a');
+            go.href = target;
+            go.textContent = 'Sí, es mi servidor';
+            go.style.cssText = 'display:inline-block;margin-top:12px;padding:10px 18px;border-radius:10px;background:#1db954;color:#000;font-weight:600;text-decoration:none';
+            box.appendChild(text);
+            box.appendChild(go);
+            document.querySelector('.container').appendChild(box);
+        }
+
+        function atHome(host) {
+            if (host === 'localhost' || /\.(local|lan|home\.arpa|internal)$/.test(host)) return true;
+            var v4 = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(host);
+            if (v4) {
+                var a = +v4[1], b = +v4[2];
+                return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
+            }
+            return host === '[::1]' || /^\[f[cd]/.test(host) || /^\[fe[89ab]/.test(host);
         }
     })();
 </script></body>
