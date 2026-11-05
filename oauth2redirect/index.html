@@ -234,5 +234,19 @@
             Ya puedes cerrar esta ventana y regresar a Rustify para comenzar a sincronizar tus datos.
         </div>
     </div>
-</body>
+<script>
+    // The desktop and iOS apps sign in through this same page; `state` says where the answer goes:
+    // a port of the computer's own loopback, or back into the iOS app. On Android the app takes this
+    // address as an App Link and the page never loads. Any other state: nothing happens.
+    (function () {
+        var query = new URLSearchParams(location.search);
+        var state = query.get('state') || '';
+        var desktop = /^rustify-desktop-(\d{1,5})-/.exec(state);
+        if (desktop) {
+            location.replace('http://127.0.0.1:' + desktop[1] + '/' + location.search);
+        } else if (state.indexOf('rustify-ios-') === 0) {
+            location.replace('rustify://oauth2redirect' + location.search);
+        }
+    })();
+</script></body>
 </html>
