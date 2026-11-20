@@ -77,6 +77,8 @@
   }
   .card:hover { border-color: var(--accent); transform: translateY(-2px); }
   .card.lead { grid-column: 1 / -1; border-left: 3px solid var(--accent); }
+  .card[hidden] { display: none; }
+  .meta { flex-wrap: wrap; }
   .card h3 { margin: 0; font-size: 1.05rem; font-family: var(--mono); }
   .card h3 a { color: var(--ink); }
   .card h3 a:hover { color: var(--accent); }
@@ -177,15 +179,13 @@
     <p class="lede">
       Computer engineer working close to the hardware: undocumented protocols, real-time signal
       processing in programmable logic, and the kind of problem that is only solved by measuring
-      it. Currently a core software developer at Ágata Technology, and building toward embedded
-      and defence systems.
+      it. Currently a core software developer at Ágata Technology and a student of the Master's in
+      High Performance Computing at the Universidade da Coruña, building toward embedded and
+      defence systems.
     </p>
-    <nav class="links">
+    <!-- After GitHub: the repositories with the most commits lately, filled in from data.json. -->
+    <nav class="links" id="toplinks">
       <a href="https://github.com/PabloSoage">GitHub</a>
-      <a href="https://github.com/PabloSoage/scanner64">scanner64</a>
-      <a href="https://github.com/PabloSoage/opendash">opendash</a>
-      <a href="https://github.com/PabloSoage/Rustify">Rustify</a>
-      <a href="https://pablosoage.github.io/openfuel/">openfuel</a>
     </nav>
     <div class="counters" id="counters">
       <div class="counter"><b id="c-repos">—</b><span>public repos</span></div>
@@ -201,56 +201,36 @@
   <div class="wrap">
     <h2>Selected work</h2>
     <p class="sub">
-      Repository metadata below — language, stars, last push — comes from the GitHub API,
-      refreshed every six hours, so it does not drift from the code.
+      Every public repository, the most active first: ordered by commits over the last six
+      months, from the GitHub API, refreshed every six hours.
     </p>
     <div class="grid" id="projects"></div>
+    <button class="more" id="more-projects" type="button" hidden>Show all projects</button>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <h2>Upstream</h2>
-    <p class="sub">Other people's projects, made better.</p>
-    <div class="grid">
-      <article class="card">
-        <h3><a href="https://github.com/DeusData/codebase-memory-mcp/issues/1764" rel="noopener">codebase-memory-mcp #1764</a></h3>
-        <p>
-          Every idle client burned about 0.7 of a CPU core from one release onward, and the cost
-          multiplied by the number of open sessions. Bisected against the last good version as a
-          control and reproduced by starting the binary from a shell and sending it nothing at
-          all. Fixed upstream; on closing, the maintainer wrote that “the diagnosis in this
-          thread did the hard part”.
-        </p>
-        <div class="tags"><span class="tag">Diagnosis</span><span class="tag">Profiling</span><span class="tag">Windows</span></div>
-      </article>
-      <article class="card">
-        <h3><a href="https://github.com/sasha0552/nvidia-pstated/pull/10" rel="noopener">nvidia-pstated #10</a></h3>
-        <p>
-          Datacentre GPUs such as the P100 and V100 expose a single performance state, so the
-          tool had nothing to switch them to. This adds a clock-based fallback: where setting a
-          P-state fails, read each GPU's lowest supported core and memory clocks and idle there
-          instead. Open.
-        </p>
-        <div class="tags"><span class="tag">C</span><span class="tag">NVML</span><span class="tag">Tesla V100</span></div>
-      </article>
-    </div>
+    <p class="sub">Other people's projects, made better: issues and pull requests, the most recent first.</p>
+    <div class="grid" id="upstream"><span class="skeleton">loading…</span></div>
+    <button class="more" id="more-upstream" type="button" hidden>Show all contributions</button>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <h2>Languages, measured</h2>
-    <p class="sub">Bytes of source across the projects listed above, markup and build glue excluded.</p>
+    <p class="sub" id="langsub">Lines of source across the public projects above, markup and build glue excluded.</p>
     <div class="bar" id="langbar"><i style="flex:1;background:var(--line)"></i></div>
     <div class="legend" id="langlegend"><span class="skeleton">loading…</span></div>
     <p class="caveat">
-      Counted per repository, so this is real source rather than repository size —
-      counting the latter would put a folder of datasets above every line of C here. LaTeX, HTML
-      and build files are left out for the same reason: the thesis alone carries half a megabyte
-      of typesetting. Even then, bytes are not where the work went. A Flex/Bison parser is
-      60&nbsp;KB and an RTL design is smaller still, and the reverse-engineering work lives in
-      private repositories that this cannot see.
+      Each repository is cloned at its tip and classified by Linguist, the same tool GitHub uses,
+      so vendored and generated files stay out; the figures are non-blank lines. Notebooks, LaTeX,
+      HTML and build scripts are left out too: a folder of notebooks would otherwise outweigh
+      every line of C here. Even then, lines are not where the work went. A Flex/Bison parser is
+      a few hundred lines, and the reverse-engineering work lives in private repositories that
+      this cannot see.
     </p>
   </div>
 </section>
@@ -331,43 +311,67 @@
 (function () {
   'use strict';
 
-  // Curated, because a repository description is one line and these deserve two.
-  // Live metadata is merged in from the API; if that fails, this still renders.
-  var PROJECTS = [
-    { repo: 'scanner64', lead: true, title: 'scanner64',
-      blurb: 'A 64-channel real-time digital down-converter bank in Verilog for the Kria KV260. One sample per cycle, fixed latency, dropped samples impossible by construction. Verified in hardware and benchmarked bit-exact against C, CUDA and Xeon builds — 11× a Tesla V100 and 40× a dual Xeon per watt.',
-      tags: ['Verilog', 'Vivado', 'DSP', 'CUDA', 'KV260'] },
-    { repo: 'opendash', lead: true, title: 'opendash',
-      blurb: 'An Android diagnostic app for an adapter with no public protocol. Recovered the wire format from packet captures, identified the frame signature as a CRC — which turned replaying captures into constructing messages — and confirmed all of it against a live vehicle. Ships an ELM327 bridge so any existing OBD app can drive the device.',
-      tags: ['Kotlin', 'Rust', 'CAN / ISO-TP', 'Reverse engineering'] },
-    { repo: 'Rustify', title: 'Rustify',
-      blurb: 'An Android music player on a native Rust core with a Compose front end: custom JNI bindings, GraphQL scraping, heuristic track matching and a zero-latency loopback stream proxy into ExoPlayer.',
-      tags: ['Rust', 'Kotlin', 'JNI'] },
-    { repo: 'openfuel', title: 'openfuel', site: 'https://pablosoage.github.io/openfuel/',
-      blurb: 'An Android app for Spanish fuel prices on the Ministry’s open data: every station in your region on a map, each litre broken down into VAT and excise, published loyalty discounts applied to the price, and its recent history. Offline-first, no keys, no trackers.',
-      tags: ['Kotlin', 'Jetpack Compose', 'MapLibre', 'Open data'] },
-    { repo: 'NeuroSync-Framework', title: 'NeuroSync-Framework',
-      blurb: 'A synchronised pipeline for real-time EEG signal processing, isolating CPU-bound work such as FastICA in separate processes behind GUI, CLI and FastAPI interfaces. Bachelor’s thesis.',
-      tags: ['Python', 'DSP', 'Multiprocessing'] },
-    { repo: 'Denso-ECU-Toolkit', title: 'Denso-ECU-Toolkit',
-      blurb: 'A toolchain for extracting, mapping and visualising calibration parameters out of Denso ECU images, with Ghidra scripts doing heuristic memory scanning.',
-      tags: ['Python', 'Ghidra', 'Automotive'] },
-    { repo: 'C-Flex-Bison-HTML-Parser', title: 'HTML DOM parser in C',
-      blurb: 'A DOM parser written from scratch: Flex and Bison for lexing and parsing, compiled to a shared library and bound to Python through ctypes. Valgrind-clean.',
-      tags: ['C', 'Flex / Bison', 'FFI'] },
-    { repo: 'OCaml-Lambda-Interpreter', title: 'Lambda calculus interpreter',
-      blurb: 'A statically typed extended lambda calculus: ocamllex/ocamlyacc front end, a type checker with aliases and structural subtyping, recursion through a fixed-point combinator, and a REPL with a persistent context.',
-      tags: ['OCaml', 'Type systems'] },
-    { repo: 'ASP-Constraint-Solvers', title: 'ASP constraint solvers',
-      blurb: 'Declarative models in Answer Set Programming for NP-hard multi-agent spatio-temporal planning and graph topology problems.',
-      tags: ['Clingo', 'Formal logic'] },
-    { repo: 'redfishctl', title: 'redfishctl',
-      blurb: 'A Rust terminal UI that controls and monitors a server’s BMC over Redfish — sensors, charts, power and the event log — with no ipmitool and no web interface.',
-      tags: ['Rust', 'TUI', 'Redfish'] },
-    { repo: 'Fabric2D', title: 'Fabric2D',
-      blurb: 'A procedural 2D engine on pygame with no commercial framework underneath: multithreaded Jump Point Search pathfinding, graph-based generation, and the native FMOD audio engine driven through its Python bindings.',
-      tags: ['Python', 'pygame', 'Pathfinding', 'FMOD'] }
-  ];
+  var LOGIN = 'PabloSoage';
+  var RECENT_MONTHS = 6;   // the window the projects are ranked on
+  var TOP_LINKS = 4;       // repositories linked in the header
+  var LEAD = 2;            // full-width cards at the top of the list
+  var SHOWN = 8;           // cards before "Show all projects": the leads and two rows of three
+  var UPSTREAM_SHOWN = 3;  // contributions before "Show all contributions": one row
+
+  // Which repositories are shown, and in what order, comes from data.json.
+  // These only say more than a one-line description can; a repository not
+  // listed here gets its GitHub description and topics.
+  var BLURB = {
+    'sh705x-emu': { tags: ['Rust', 'SH-2E', 'Emulation', 'Automotive', 'egui'],
+      blurb: 'An emulator for Denso engine ECUs on the Renesas SH-2E, written from scratch in Rust. It runs a car’s own firmware unmodified against modelled peripherals and a simulated engine, idling at 750 rpm on the torque the firmware asks for, faster than real time, and traces every calibration-map lookup live. Desktop GUI and an Android app over the same core.' },
+    'tensor-mirror': { tags: ['SystemVerilog', 'CUDA', 'Computer arithmetic', 'KV260'],
+      blurb: 'Bit-exact replicas of NVIDIA tensor-core arithmetic in RTL: one parametrised unit that returns the same bits as a chosen GPU, from Volta to RTX Blackwell with MXFP4/NVFP4 block scaling, and GEMM arrays of it on the Kria KV260. Checked with its own mma.sync kernels on five GPUs; on the board, 0 mismatches in 7.6 million results.' },
+    'kv260-ias2rf': { tags: ['KiCad', 'RF', 'Verilog', 'Radar', 'SDR'],
+      blurb: 'An RF front-end carrier board for the Kria KV260: multiband SDR from HF to 3 GHz and the IF of the AERIS-10 10.5 GHz FMCW radar with ADAR1000 beamforming, plus Ethernet, vehicle CAN and GPS, with its own front-end FPGA, gateware, Rust firmware and a printed enclosure.' },
+    'glidedesk': { tags: ['Rust', 'NVENC', 'Wayland', 'RDP', 'WebRTC'],
+      blurb: 'A GPU-accelerated remote desktop for Linux: headless GNOME sessions composited on the GPU, hardware-encoded, resizing with the client window. Served at once over standard RDP, so mstsc works with nothing installed, over its own protocol with video on UDP and Reed-Solomon FEC, and over WebRTC to any browser.' },
+    'disklens': { tags: ['Rust', 'S.M.A.R.T.', 'TUI', 'egui', 'Prometheus'],
+      blurb: 'Disk health for Linux and Windows with CrystalDiskInfo’s evaluation ported line by line: one engine behind a terminal UI, a CLI, a desktop GUI and a web interface with a JSON API and Prometheus metrics. 268 of 269 values match CrystalDiskInfo on four disks.' },
+    'scanner64': { tags: ['Verilog', 'Vivado', 'DSP', 'CUDA', 'KV260'],
+      blurb: 'A 64-channel real-time digital down-converter bank in Verilog for the Kria KV260. One sample per cycle, fixed latency, dropped samples impossible by construction. Verified in hardware and benchmarked bit-exact against C, CUDA and Xeon builds — 11× a Tesla V100 and 40× a dual Xeon per watt.' },
+    'opendash': { tags: ['Kotlin', 'Rust', 'CAN / ISO-TP', 'Reverse engineering'],
+      blurb: 'An Android diagnostic app for an adapter with no public protocol. Recovered the wire format from packet captures, identified the frame signature as a CRC — which turned replaying captures into constructing messages — and confirmed all of it against a live vehicle. Ships an ELM327 bridge so any existing OBD app can drive the device.' },
+    'Rustify': { tags: ['Rust', 'Kotlin', 'Compose Multiplatform', 'WebAssembly'],
+      blurb: 'A music player for Android, Windows, Linux, macOS, iOS and the web: one native Rust core under one Compose Multiplatform interface, reached over JNI or a C ABI, with its own audio engine where there is no ExoPlayer and a server that serves the whole app to any browser as WebAssembly.' },
+    'openfuel': { tags: ['Kotlin', 'Jetpack Compose', 'MapLibre', 'Open data'],
+      blurb: 'An Android app for Spanish fuel prices on the Ministry’s open data: every station in your region on a map, each litre broken down into VAT and excise, published loyalty discounts applied to the price, and its recent history. Offline-first, no keys, no trackers.' },
+    'NeuroSync-Framework': { tags: ['Python', 'DSP', 'Multiprocessing'],
+      blurb: 'A synchronised pipeline for real-time EEG signal processing, isolating CPU-bound work such as FastICA in separate processes behind GUI, CLI and FastAPI interfaces. Bachelor’s thesis.' },
+    'Denso-ECU-Toolkit': { tags: ['Python', 'Ghidra', 'Automotive'],
+      blurb: 'A toolchain for extracting, mapping and visualising calibration parameters out of Denso ECU images, with Ghidra scripts doing heuristic memory scanning.' },
+    'C-Flex-Bison-HTML-Parser': { title: 'HTML DOM parser in C', tags: ['C', 'Flex / Bison', 'FFI'],
+      blurb: 'A DOM parser written from scratch: Flex and Bison for lexing and parsing, compiled to a shared library and bound to Python through ctypes. Valgrind-clean.' },
+    'OCaml-Lambda-Interpreter': { title: 'Lambda calculus interpreter', tags: ['OCaml', 'Type systems'],
+      blurb: 'A statically typed extended lambda calculus: ocamllex/ocamlyacc front end, a type checker with aliases and structural subtyping, recursion through a fixed-point combinator, and a REPL with a persistent context.' },
+    'ASP-Constraint-Solvers': { title: 'ASP constraint solvers', tags: ['Clingo', 'Formal logic'],
+      blurb: 'Declarative models in Answer Set Programming for NP-hard multi-agent spatio-temporal planning and graph topology problems.' },
+    'redfishctl': { tags: ['Rust', 'TUI', 'Redfish'],
+      blurb: 'A Rust terminal UI that controls and monitors a server’s BMC over Redfish — sensors, charts, power and the event log — with no ipmitool and no web interface.' },
+    'Fabric2D': { tags: ['Python', 'pygame', 'Pathfinding', 'FMOD'],
+      blurb: 'A procedural 2D engine on pygame with no commercial framework underneath: multithreaded Jump Point Search pathfinding, graph-based generation, and the native FMOD audio engine driven through its Python bindings.' }
+  };
+
+  // The same for contributions upstream, keyed "owner/repo#number"; one not
+  // listed here is shown by its title.
+  var NOTE = {
+    'DeusData/codebase-memory-mcp#1764': { tags: ['Diagnosis', 'Profiling', 'Windows'],
+      note: 'Every idle client burned about 0.7 of a CPU core from one release onward, and the cost multiplied by the number of open sessions. Bisected against the last good version as a control and reproduced by starting the binary from a shell and sending it nothing at all. Fixed upstream; on closing, the maintainer wrote that “the diagnosis in this thread did the hard part”.' },
+    'sasha0552/nvidia-pstated#10': { tags: ['C', 'NVML', 'Tesla V100'],
+      note: 'Datacentre GPUs such as the P100 and V100 expose a single performance state, so the tool had nothing to switch them to. This adds a clock-based fallback: where setting a P-state fails, read each GPU’s lowest supported core and memory clocks and idle there instead.' },
+    'microsoft/MMA-Sim#19': { tags: ['Tensor cores', 'Turing', 'RTX Blackwell'],
+      note: 'Measured on an RTX 2060 and an RTX 5070 Ti against the bit-accurate simulator: Turing runs Volta’s m8n8k4 with a 23-bit sum, not its own 24, and kind::f8f6f4 reads the padding bits of an E2M1 byte as mantissa. Adopted in MMA-Sim.' },
+    'microsoft/MMA-Sim#22': { tags: ['Tensor cores', 'Volta', 'Tesla V100'],
+      note: 'Measured on four V100s: on Volta’s m8n8k4, the exponent a zero accumulator takes depends on the output type, −19 with f16 outputs rather than −20. Adopted in MMA-Sim.' },
+    'NawfalMotii79/PLFM_RADAR#213': { tags: ['FPGA', 'DSP', 'Radar'],
+      note: 'The numerically controlled oscillator of the radar’s digital down-converter rejects its images by only 18 dB. Traced to the quadrant fold, an integer-step lookup table and the tuning-word dither.' },
+    'NawfalMotii79/PLFM_RADAR#214': { tags: ['Verilog', 'DSP', 'Radar'],
+      note: 'The fix for the issue above: quadrant fold, a half-step lookup table and phase dither in the NCO.' }
+  };
 
   // Colours borrowed from GitHub's own language palette, so the bar reads the
   // way people expect it to.
@@ -393,14 +397,15 @@
     if (d <= 0) return 'today';
     if (d === 1) return 'yesterday';
     if (d < 30) return d + ' days ago';
-    if (d < 365) return Math.round(d / 30) + ' months ago';
-    return Math.round(d / 365) + ' years ago';
+    if (d < 365) return Math.round(d / 30) === 1 ? 'a month ago' : Math.round(d / 30) + ' months ago';
+    return Math.round(d / 365) === 1 ? 'a year ago' : Math.round(d / 365) + ' years ago';
   }
 
   function card(p, live) {
     var el = document.createElement('article');
     el.className = 'card' + (p.lead ? ' lead' : '');
-    var url = 'https://github.com/PabloSoage/' + p.repo;
+    if (p.hidden) el.hidden = true;
+    var url = p.url || 'https://github.com/' + LOGIN + '/' + p.repo;
 
     var h = document.createElement('h3');
     var a = document.createElement('a');
@@ -442,20 +447,96 @@
       up.textContent = 'updated ' + ago(live.pushed_at);
       m.appendChild(up);
       el.appendChild(m);
+    } else if (p.meta) {
+      var mm = document.createElement('div');
+      mm.className = 'meta';
+      p.meta.forEach(function (t) {
+        var s = document.createElement('span'); s.textContent = t; mm.appendChild(s);
+      });
+      el.appendChild(mm);
     }
     return el;
   }
 
-  function render(repos) {
-    var byName = {};
-    (repos || []).forEach(function (r) { byName[r.name.toLowerCase()] = r; });
+  // Commits per public repository over the last RECENT_MONTHS calendar months
+  // of the rolling view, which is how "most active" is decided.
+  function recentCommits(view) {
+    var keys = Object.keys(view.commits || {}).sort().slice(-RECENT_MONTHS);
+    var n = {};
+    keys.forEach(function (k) {
+      view.commits[k].public.forEach(function (r) { n[r.name] = (n[r.name] || 0) + r.commits; });
+    });
+    return n;
+  }
 
+  // Own work only: no forks, nothing archived, and not the profile README or
+  // the GitHub Pages sites, which are commits about the work rather than work.
+  function projectsOf(repos, recent) {
+    return repos.filter(function (r) {
+      return !r.fork && !r.archived && r.name !== LOGIN && !/\.github\.io$/i.test(r.name);
+    }).sort(function (a, b) {
+      return (recent[b.name] || 0) - (recent[a.name] || 0) ||
+             (new Date(b.pushed_at) - new Date(a.pushed_at));
+    });
+  }
+
+  function projects(list) {
     var grid = $('projects');
     grid.textContent = '';
-    PROJECTS.forEach(function (p) {
-      grid.appendChild(card(p, byName[p.repo.toLowerCase()]));
+    list.forEach(function (r, i) {
+      var c = BLURB[r.name] || {};
+      var page = r.homepage && r.homepage.replace(/\/$/, '') !== 'https://github.com/' + LOGIN + '/' + r.name
+        ? r.homepage : null;
+      grid.appendChild(card({
+        repo: r.name, title: c.title || r.name, site: page,
+        blurb: c.blurb || r.description || '',
+        tags: c.tags || (r.topics || []).slice(0, 5),
+        lead: i < LEAD, hidden: i >= SHOWN
+      }, r));
     });
+    var more = $('more-projects');
+    more.hidden = list.length <= SHOWN;
+    more.textContent = 'Show all ' + list.length + ' projects';
+    more.onclick = function () {
+      Array.prototype.forEach.call(grid.children, function (el) { el.hidden = false; });
+      more.hidden = true;
+    };
 
+    var nav = $('toplinks');
+    list.slice(0, TOP_LINKS).forEach(function (r) {
+      var a = document.createElement('a');
+      a.href = r.html_url; a.rel = 'noopener'; a.textContent = r.name;
+      nav.appendChild(a);
+    });
+  }
+
+  function upstream(items) {
+    var grid = $('upstream');
+    grid.textContent = '';
+    if (!items.length) { grid.innerHTML = '<span class="skeleton">Nothing yet.</span>'; return; }
+    var STATE = { merged: 'merged', open: 'open', closed: 'closed' };
+    items.forEach(function (u, i) {
+      var key = u.repo + '#' + u.number, c = NOTE[key] || {};
+      var state = u.state === 'closed' && u.state_reason === 'completed' && u.kind === 'issue'
+        ? 'closed as completed' : STATE[u.state] || u.state;
+      grid.appendChild(card({
+        url: u.url, title: u.repo.split('/')[1] + ' #' + u.number,
+        blurb: c.note || u.title,
+        tags: [u.kind === 'pr' ? 'Pull request' : 'Issue'].concat(c.tags || []),
+        hidden: i >= UPSTREAM_SHOWN,
+        meta: [u.repo, '★ ' + u.stars, state, 'updated ' + ago(u.updated_at)]
+      }, null));
+    });
+    var more = $('more-upstream');
+    more.hidden = items.length <= UPSTREAM_SHOWN;
+    more.textContent = 'Show all ' + items.length + ' contributions';
+    more.onclick = function () {
+      Array.prototype.forEach.call(grid.children, function (el) { el.hidden = false; });
+      more.hidden = true;
+    };
+  }
+
+  function render(repos) {
     if (!repos) return;
 
     // ── counters ──
@@ -660,7 +741,8 @@
   // line of C here, which is false. The per-repository `languages` endpoint
   // returns actual bytes per language; the workflow collects it per
   // repository, and only the projects listed above are summed here.
-  function paint(bytes) {
+  // `unit` is 'lines' when the workflow counted them, else 'bytes'.
+  function paint(bytes, unit, repoCount) {
     var langs = Object.keys(bytes).filter(function (k) { return !NOT_CODE[k]; })
       .map(function (k) { return [k, bytes[k]]; })
       .sort(function (a, b) { return b[1] - a[1]; });
@@ -668,6 +750,14 @@
     if (!total) return;
 
     $('c-langs').textContent = langs.length;
+    $('langsub').textContent = unit === 'lines'
+      ? total.toLocaleString('en') + ' non-blank lines of source across the ' + repoCount +
+        ' public projects above, markup and build glue excluded.'
+      : 'Bytes of source across the ' + repoCount + ' public projects above, markup and build glue excluded.';
+    function amount(n) {
+      return unit === 'lines' ? n.toLocaleString('en') + ' lines'
+                              : (n / 1024).toLocaleString('en', { maximumFractionDigits: 0 }) + ' KB';
+    }
     var bar = $('langbar'), legend = $('langlegend');
     bar.textContent = ''; legend.textContent = '';
     var shown = langs.slice(0, 8);
@@ -678,23 +768,25 @@
       var colour = LANG_COLOUR[l[0]] || 'var(--faint)';
       var i = document.createElement('i');
       i.style.flex = String(pct); i.style.background = colour;
-      i.title = l[0] + ' ' + pct.toFixed(1) + '%';
+      i.title = l[0] + ' ' + pct.toFixed(1) + '% · ' + amount(l[1]);
       bar.appendChild(i);
 
       var s = document.createElement('span');
       s.innerHTML = '<i style="background:' + colour + '"></i>';
-      s.appendChild(document.createTextNode(l[0] + ' ' + pct.toFixed(1) + '%'));
+      s.appendChild(document.createTextNode(l[0] + ' ' + pct.toFixed(1) + '% · ' + amount(l[1])));
       legend.appendChild(s);
     });
   }
 
-  function languages(perRepo) {
-    var bytes = {};
-    PROJECTS.forEach(function (p) {
-      var one = perRepo[p.repo] || {};
-      Object.keys(one).forEach(function (k) { bytes[k] = (bytes[k] || 0) + one[k]; });
+  function languages(data, list) {
+    var useLines = data.lines && Object.keys(data.lines).length;
+    var perRepo = useLines ? data.lines : data.languages;
+    var sum = {};
+    list.forEach(function (r) {
+      var one = perRepo[r.name] || {};
+      Object.keys(one).forEach(function (k) { sum[k] = (sum[k] || 0) + one[k]; });
     });
-    paint(bytes);
+    paint(sum, useLines ? 'lines' : 'bytes', list.length);
   }
 
   // Everything GitHub-side comes from data.json, which a workflow in this
@@ -704,13 +796,18 @@
   fetch('data.json', { cache: 'no-cache' })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function (data) {
+      var list = projectsOf(data.repos, recentCommits(data.views[0]));
+      projects(list);
+      upstream(data.upstream || []);
       render(data.repos);
-      languages(data.languages);
+      languages(data, list);
       $('c-contrib').textContent = data.views[0].total.toLocaleString('en');
       years(data.views);
     })
     .catch(function () {
-      render(null);
+      $('projects').innerHTML = '<span class="skeleton">The projects did not load this time. ' +
+        'They are all on <a href="https://github.com/PabloSoage">the GitHub profile</a>.</span>';
+      $('upstream').textContent = '';
       $('langlegend').innerHTML = '<span class="skeleton">The statistics did not load this time.</span>';
       $('cal').innerHTML = '<span class="skeleton">The calendar did not load this time. ' +
         'It is always on <a href="https://github.com/PabloSoage">the GitHub profile</a>.</span>';

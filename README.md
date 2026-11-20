@@ -6,14 +6,17 @@ A portfolio page, and the Android App Links verification for
 ## Files
 
 - **`index.html`** — the whole site. One file, no framework and no build step. Everything it
-  shows about the GitHub account — repositories, the language bar, the counters, the
+  shows about the GitHub account — the repositories, ranked by commits over the
+  last six months (the top four also linked in the header), the issues and pull requests in
+  other people's repositories, the language bar in lines of source, the counters, the
   contribution calendar for the last twelve months and for each year, and the monthly
   activity — is read from `data.json` beside it. The
   page never calls the GitHub API: unauthenticated, that allows sixty requests an hour per
   address, and asking it on every visit broke the page after a few visits from one network.
 - **`data.json`** — generated; do not edit by hand. `scripts/refresh.mjs` writes it and
   `.github/workflows/refresh.yml` runs that every six hours, committing only when something
-  changed. Run it on demand from the Actions tab (*Refresh GitHub data → Run workflow*). The
+  changed. It counts lines by cloning each public repository and classifying its files with
+  Linguist (`ruby-github-linguist` from apt); without Linguist the page falls back to bytes. Run it on demand from the Actions tab (*Refresh GitHub data → Run workflow*). The
   script drops every private repository itself rather than trusting the token not to see them,
   because it is also run by hand with a personal token that can.
 - **`.well-known/assetlinks.json`** — declares `com.varuna.rustify` as the verified handler for

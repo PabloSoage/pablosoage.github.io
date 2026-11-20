@@ -10,7 +10,10 @@
 // token, which can — so every list is filtered on visibility here, not trusted
 // to the token.
 
-import { writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const LOGIN = 'PabloSoage';
 const OUT = process.argv[2] ?? 'data.json';
@@ -23,14 +26,23 @@ const HEADERS = {
   'user-agent': 'pablosoage.github.io refresh',
 };
 
+// A kept-alive connection can be dropped by the far end while the clones run;
+// the request is retried on a socket error, never on an HTTP error.
+async function get(url, init) {
+  for (let i = 0; ; i++) {
+    try { return await fetch(url, init); }
+    catch (e) { if (i === 2) throw e; await new Promise((ok) => setTimeout(ok, 2000)); }
+  }
+}
+
 async function rest(path) {
-  const r = await fetch(`https://api.github.com/${path}`, { headers: HEADERS });
+  const r = await get(`https://api.github.com/${path}`, { headers: HEADERS });
   if (!r.ok) throw new Error(`${path}: ${r.status} ${await r.text()}`);
   return r.json();
 }
 
 async function graphql(query, variables) {
-  const r = await fetch('https://api.github.com/graphql', {
+  const r = await get('https://api.github.com/graphql', {
     method: 'POST', headers: HEADERS, body: JSON.stringify({ query, variables }),
   });
   const body = await r.json();
@@ -46,12 +58,67 @@ const repos = listed
     name: r.name, html_url: r.html_url, language: r.language,
     stargazers_count: r.stargazers_count, pushed_at: r.pushed_at,
     created_at: r.created_at, fork: r.fork, archived: r.archived,
+    description: r.description, topics: r.topics ?? [], homepage: r.homepage || null,
   }));
 
 const languages = {};
 for (const r of repos) {
   if (r.fork) continue;
   languages[r.name] = await rest(`repos/${LOGIN}/${r.name}/languages`);
+}
+
+// ── lines of source per language ────────────────────────────────────────
+// The languages endpoint counts bytes. Lines are what people read, so each
+// public repository is cloned at its tip and Linguist — the same classifier
+// GitHub uses, with its vendored and generated rules — says which files are
+// which language; their non-blank lines are counted here. Needs
+// `github-linguist` on the PATH (apt: ruby-github-linguist); without it this
+// step is skipped and the page falls back to bytes.
+const lines = {};
+const hasLinguist = spawnSync('github-linguist', ['--version']).status === 0;
+if (hasLinguist) {
+  const work = mkdtempSync(join(tmpdir(), 'lines-'));
+  for (const r of repos) {
+    if (r.fork) continue;
+    const dir = join(work, r.name);
+    const clone = spawnSync('git', ['clone', '--quiet', '--depth', '1', `https://github.com/${LOGIN}/${r.name}.git`, dir]);
+    if (clone.status !== 0) { console.warn(`${r.name}: clone failed, no line count`); continue; }
+    const out = spawnSync('github-linguist', ['--breakdown', '--json'], { cwd: dir, maxBuffer: 1 << 28 });
+    if (out.status !== 0) { console.warn(`${r.name}: linguist failed, no line count`); continue; }
+    const perLang = {};
+    for (const [lang, info] of Object.entries(JSON.parse(out.stdout.toString()))) {
+      let n = 0;
+      for (const f of info.files) {
+        try { n += readFileSync(join(dir, f), 'utf8').split('\n').filter((l) => l.trim()).length; }
+        catch { /* a file Linguist names but the checkout lacks, e.g. a broken symlink */ }
+      }
+      if (n) perLang[lang] = n;
+    }
+    lines[r.name] = perLang;
+    rmSync(dir, { recursive: true, force: true });
+  }
+  rmSync(work, { recursive: true, force: true });
+} else {
+  console.warn('github-linguist not found: lines of source not collected');
+}
+
+// ── upstream: issues and pull requests in other people's repositories ───
+// Search only ever returns public repositories to an unauthenticated view of
+// them, but the repository is checked anyway, as everywhere else here.
+const found = await rest(`search/issues?q=${encodeURIComponent(`author:${LOGIN} -user:${LOGIN}`)}&sort=updated&order=desc&per_page=100`);
+const upstream = [];
+for (const it of found.items) {
+  const repo = it.repository_url.replace('https://api.github.com/repos/', '');
+  const meta = await rest(`repos/${repo}`);
+  if (meta.private) continue;
+  upstream.push({
+    repo, repo_url: meta.html_url, stars: meta.stargazers_count,
+    number: it.number, title: it.title, url: it.html_url,
+    kind: it.pull_request ? 'pr' : 'issue',
+    state: it.pull_request?.merged_at ? 'merged' : it.state,
+    state_reason: it.state_reason ?? null,
+    comments: it.comments, created_at: it.created_at, updated_at: it.updated_at,
+  });
 }
 
 // ── contribution calendars ──────────────────────────────────────────────
@@ -126,7 +193,7 @@ for (const y of rolling.years) {
 }
 for (const v of views) delete v.years;
 
-const data = { repos, languages, views };
+const data = { repos, languages, lines, upstream, views };
 writeFileSync(OUT, JSON.stringify(data) + '\n');
-console.log(`${OUT}: ${repos.length} repos; ` +
+console.log(`${OUT}: ${repos.length} repos, ${Object.keys(lines).length} line-counted, ${upstream.length} upstream; ` +
   views.map((v) => `${v.id} ${v.total} over ${v.days.length} days`).join(', '));

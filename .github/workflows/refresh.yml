@@ -25,6 +25,10 @@ jobs:
         with:
           node-version: 22
 
+      # Linguist classifies each repository's files for the lines-of-source count.
+      - name: Install Linguist
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ruby-github-linguist
+
       - name: Collect
         run: node scripts/refresh.mjs data.json
         env:
